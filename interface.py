@@ -1,53 +1,81 @@
-import matplotlib.pyplot as plt
+import tkinter as tk
+
+from explore import get_qep_details
 
 
-# Function to visualize QEP details.
-def visualize_qep(aspects):
-    display_label, display_values = generate_display_aspects(aspects)
-    create_and_display_chart(display_label, display_values)
+# Function to draw a node on the canvas
+def draw_node(canvas, text, x, y):
+    # Create a rectangle for the node
+    node = canvas.create_rectangle(x, y, x + 150, y + 50, fill='white', outline='black')
+    # Put the text inside the node
+    canvas.create_text(x + 75, y + 25, text=text)
+    return node
 
 
-# Function to process data to be displayed.
-def generate_display_aspects(aspects):
-    labels = list(aspects.keys())
-    display_label = []
-    display_values = []
+# Function to draw a line between two nodes
+def draw_line(canvas, node1, node2):
+    # Get the middle of the bottom edge of the first node
+    x1, y1, x2, y2 = canvas.coords(node1)
+    start_x = (x1 + x2) // 2
+    start_y = y2
 
-    for label in labels:
-        # Only display fields that are integer or float
-        if isinstance(aspects[label], bool):
-            continue
-        elif isinstance(aspects[label], (int, float)):
-            # Only Display values that are non-zero
-            if aspects[label] != 0:
-                # Add units for labels associated with time
-                if "Cost" in label or "Time" in label:
-                    display_label.append(f"{label} (ms)")
-                else:
-                    display_label.append(label)
-                display_values.append(aspects[label])
-        else:
-            continue
-    return display_label, display_values
+    # Get the middle of the top edge of the second node
+    x3, y3, x4, y4 = canvas.coords(node2)
+    end_x = (x3 + x4) // 2
+    end_y = y3
+
+    # Draw a line with an arrow at the end between the nodes
+    canvas.create_line(start_x, start_y, end_x, end_y, arrow=tk.LAST)
 
 
-# Function to plot and display chart
-def create_and_display_chart(display_label, display_values):
-    assert (len(display_label) == len(display_values))
-    # Initialise chart
-    plt.figure(figsize=(10, 6))
-    plt.xlabel("QEP Aspects")
-    plt.ylabel("Values (Logarithmic Scale)")
-    plt.title("Query Execution Plan Aspects")
-    plt.xticks(rotation=45, ha="right")
+# Function to recursively draw nodes and their children
+# Function to recursively draw nodes and their children
+def draw_nodes_recursively(canvas, plan, x, y, level=0, parent=None):
+    # Check if 'Node Type' and 'Total Cost' keys exist
+    node_type = plan.get('Node Type', 'Unknown Node')
+    total_cost = plan.get('Total Cost', 'N/A')
+    node_text = f"{node_type}\nCost={total_cost}"
+    node = draw_node(canvas, node_text, x, y)
+    if parent:
+        draw_line(canvas, parent, node)
 
-    # Plot chart
-    bars = plt.bar(display_label, display_values, color='skyblue')
-    plt.yscale("log")  # Add logarithmic scale to the y-axis
+    # Assume each level has a fixed vertical distance, and horizontal distance is based on order
+    vertical_distance = 100
+    horizontal_distance = 150
 
-    # Add text labels for each bar
-    for bar, value in zip(bars, display_values):
-        plt.text(bar.get_x() + bar.get_width() / 2 - 0.15, value, str(value), ha='center', va='bottom')
+    # Calculate the x offset for child nodes to avoid overlapping
+    if 'Plans' in plan:
+        num_children = len(plan['Plans'])
+        child_offset = (num_children - 1) * horizontal_distance / 2
 
-    plt.tight_layout()
-    plt.show()
+        for i, subplan in enumerate(plan['Plans']):
+            # Position children horizontally based on their order
+            child_x = x + (i * horizontal_distance) - child_offset
+            # Increase the vertical position for the child nodes
+            child_y = y + vertical_distance
+            draw_nodes_recursively(canvas, subplan, child_x, child_y, level + 1, node)
+
+def run_gui(qep_details):
+    # Create the main window
+    root = tk.Tk()
+    root.title('QEP Visualization')
+
+    # Create a canvas to draw the QEP diagram
+    canvas = tk.Canvas(root, width=800, height=600, bg='white')
+    canvas.pack(fill=tk.BOTH, expand=True)
+
+    # Assuming qep_details is already the correct part of the plan
+    draw_nodes_recursively(canvas, qep_details, 400, 50)
+
+    # Start the Tkinter event loop
+    root.mainloop()
+
+if __name__ == "__main__":
+    # Fetch the actual QEP details using your explore.py module
+    sql_query = "SELECT * FROM public.orders WHERE o_orderkey > 50 AND o_orderkey < 300;"
+    qep_details = get_qep_details(sql_query)
+
+    if qep_details is not None:
+        run_gui(qep_details)
+    else:
+        print("Failed to get QEP details.")

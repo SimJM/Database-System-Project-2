@@ -22,26 +22,31 @@ def generate_query_plan(sql_query):
     cursor = conn.cursor()
 
     try:
+        print(f"Executing SQL query: {sql_query}")
         # Execute the SQL query and retrieve the query execution plan (QEP) in JSON format.
         cursor.execute(f"EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) {sql_query}")
         query_plan = cursor.fetchall()
+        print(json.dumps(query_plan, indent=4))
 
     except Exception as e:
         print(f"Error: {e}")
+        return None  # Return None if there's an error
 
     finally:
         # Close the cursor and the database connection.
         cursor.close()
         conn.close()
 
-    print(json.dumps(query_plan, indent=4))
     return query_plan
 
 
 # Function to extract relevant information from the query plan.
 def extract_qep_details(query_plan):
+    if query_plan is None:
+        return None  # Return None if query_plan is None
+
     query_plan_json = query_plan[0][0][0];
     aspects = query_plan_json.get("Plan", {})
-    aspects["Planning Time"] = query_plan_json.get("Planning Time")
-    aspects["Execution Time"] = query_plan_json.get("Execution Time")
+    aspects["Planning Time"] = query_plan_json.get("Planning Time", 0)
+    aspects["Execution Time"] = query_plan_json.get("Execution Time", 0)
     return aspects;
