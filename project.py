@@ -1,5 +1,5 @@
 import explore
-from interface import run_gui  # Import the run_gui function from your interface.py file
+import interface
 
 
 def project():
@@ -8,17 +8,17 @@ def project():
 
 # Function to execute and visualize a SQL query.
 def run_explore_b():
-    sql_query = "SELECT nation.n_nationkey, nation.n_name, region.r_name AS region_name, nation.n_comment FROM public.nation JOIN public.region ON nation.n_regionkey = region.r_regionkey;"
-    qep_details = explore.get_qep_details(sql_query)
+    sql_query = interface.get_user_input()
+    # <<<<< TODO: for convenience only, remove before submission
+    if not sql_query:
+        sql_query = "SELECT nation.n_nationkey, nation.n_name, region.r_name AS region_name, nation.n_comment FROM public.nation JOIN public.region ON nation.n_regionkey = region.r_regionkey;"
+    # >>>>>
 
-    # Check for None before proceeding
-    if qep_details:
-        try:
-            run_gui(qep_details)  # Pass the QEP details to the GUI
-        except Exception as e:
-            print(f"Failed to run GUI: {e}")
-    else:
-        print("Failed to get QEP details.")
+    try:
+        qep_details = explore.get_qep_details(sql_query)
+        interface.visualize_qep(qep_details)
+    except Exception as error:
+        interface.show_message_popout(error)
 
 
 if __name__ == "__main__":
