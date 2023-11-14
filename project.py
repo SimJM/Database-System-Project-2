@@ -1,8 +1,10 @@
 import explore
 from interface import run_gui  # Import the run_gui function from your interface.py file
 
+
 def project():
     print("Project built and ran successfully!")
+
 
 # Function to execute and visualize a SQL query.
 def run_explore_b():
@@ -18,7 +20,7 @@ def run_explore_b():
     else:
         print("Failed to get QEP details.")
 
+
 if __name__ == "__main__":
     run_explore_b()
     project()
-
