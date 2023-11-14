@@ -3,8 +3,20 @@ import database
 
 
 # Part (a) Visualization of disk blocks accessed by the query
-def test_explore_part_a():
-    print("Hello, explore part a!")
+# Function to execute and get a table.
+def get_query_results(sql_query):
+    # Connect to the PgSQL database.
+    conn = database.connect()
+    cursor = conn.cursor()
+
+    print(f"Executing SQL query: {sql_query}")
+    cursor.execute(sql_query)
+    results_table = cursor.fetchall()
+
+    # Close the cursor and the database connection.
+    cursor.close()
+    conn.close()
+    return results_table
 
 
 # Part (b) Visualizing different aspects of the QEP including buffer size, cost, etc
@@ -21,21 +33,15 @@ def generate_query_plan(sql_query):
     conn = database.connect()
     cursor = conn.cursor()
 
-    try:
-        print(f"Executing SQL query: {sql_query}")
-        # Execute the SQL query and retrieve the query execution plan (QEP) in JSON format.
-        cursor.execute(f"EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) {sql_query}")
-        query_plan = cursor.fetchall()
-        print(json.dumps(query_plan, indent=4))
+    print(f"Generating QEP for query: {sql_query}")
+    # Execute the SQL query and retrieve the query execution plan (QEP) in JSON format.
+    cursor.execute(f"EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) {sql_query}")
+    query_plan = cursor.fetchall()
+    print(json.dumps(query_plan, indent=4))
 
-    except Exception as e:
-        print(f"Error: {e}")
-        return None  # Return None if there's an error
-
-    finally:
-        # Close the cursor and the database connection.
-        cursor.close()
-        conn.close()
+    # Close the cursor and the database connection.
+    cursor.close()
+    conn.close()
 
     return query_plan
 

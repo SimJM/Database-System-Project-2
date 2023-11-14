@@ -1,5 +1,5 @@
 import tkinter as tk
-from explore import get_qep_details
+from tkinter import scrolledtext
 
 
 # Function to draw a node on the canvas
@@ -87,7 +87,7 @@ def draw_nodes_recursively(canvas, plan, x, y, level=0, parent=None):
             draw_nodes_recursively(canvas, sub_plan, child_x, child_y, level + 1, node)
 
 
-def run_gui(qep_details):
+def visualize_qep(qep_details):
     root = tk.Tk()
     root.title('QEP Visualization')
 
@@ -103,3 +103,63 @@ def run_gui(qep_details):
     draw_nodes_recursively(canvas, qep_details, 250, 50)
 
     root.mainloop()
+
+
+# Function to display window to take in user input
+def get_user_input():
+    def on_submit():
+        text = entry.get("1.0", tk.END).strip()
+        result_label.config(text=f"You entered: {text}")
+        root.quit()  # To exit the main loop
+        return text
+
+    root = tk.Tk()
+    root.title("User SQL Input")
+
+    label = tk.Label(root, text="Enter a SQL query:")
+    label.pack()
+
+    entry = scrolledtext.ScrolledText(root, wrap=tk.WORD, width=40, height=10)
+    entry.pack(expand=True, fill="both")
+
+    result_label = tk.Label(root, text="")
+    result_label.pack()
+
+    submit_button = tk.Button(root, text="Submit", command=on_submit)
+    submit_button.pack()
+
+    center_window(root, 400, 300)
+    root.mainloop()
+
+    # After the user submits the input, call the callback to get the user input
+    user_input = on_submit()
+    return user_input
+
+
+# Function to display message
+def show_message_popout(message):
+    def dismiss():
+        root.quit()  # To exit the main loop
+
+    root = tk.Tk()
+    root.title("Message")
+
+    label = tk.Label(root, text=message)
+    label.pack()
+
+    submit_button = tk.Button(root, text="Dismiss", command=dismiss)
+    submit_button.pack()
+
+    center_window(root, 400, 200)
+    root.mainloop()
+
+
+# Function to center the window when pop out
+def center_window(root, width, height):
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+
+    x = (screen_width - width) // 2
+    y = (screen_height - height) // 2
+
+    root.geometry(f"{width}x{height}+{x}+{y}")
