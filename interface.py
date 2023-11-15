@@ -1,11 +1,13 @@
 import tkinter as tk
 from tkinter import scrolledtext, ttk
+
+import explore
 from explore import get_query_results, craft_ctid_query, craft_stats_query, craft_block_content_query, display_disk_blocks, disk_block_access_and_buffer
 import pandas as pd
 from pandastable import Table
 
 
-def visualise_blocks(tables_involved, table1, table2, table3):
+def visualise_blocks(tables_involved, table1, table2):
     # Main application window
     root = tk.Tk()
     root.title("Database Block Visualization")
@@ -67,9 +69,14 @@ def visualise_blocks(tables_involved, table1, table2, table3):
     block_id_entry = tk.Entry(root)
     block_id_entry.pack(fill='x')
 
+    table_name = 'orders'
+    block_id = 0  # TODO: take in user input to get block_id
+    query_for_block_content = explore.craft_block_content_query(table_name, block_id)
+    block_content_table = explore.get_query_results(query_for_block_content)
+
     # Visualize button
     visualize_button = tk.Button(root, text="Visualize",
-                                 command=lambda: table3)
+                                 command=lambda: block_content_table)
     visualize_button.pack(pady=5)
 
     root.mainloop()
