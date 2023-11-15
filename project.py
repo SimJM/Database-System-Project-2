@@ -9,25 +9,28 @@ def run_explore_a():
         sql_query = "SELECT nation.n_nationkey, nation.n_name, region.r_name AS region_name, nation.n_comment FROM public.nation JOIN public.region ON nation.n_regionkey = region.r_regionkey;"
     # >>>>>
 
-    try:
-        explore.detect_injection(sql_query)  # Prevent SQL injection to change data in database.
+    #try:
+    explore.detect_injection(sql_query)  # Prevent SQL injection to change data in database.
+    tables_involved = explore.get_tables_involved(sql_query)
 
-        query_with_ctid = explore.craft_ctid_query(sql_query)
-        result_table_with_block_info_only = explore.get_query_results(query_with_ctid)
-        # TODO: visualize result_table_with_block_info_only
+    query_with_ctid = explore.craft_ctid_query(sql_query)
+    result_table_with_block_info_only = explore.get_query_results(query_with_ctid)
+    # TODO: visualize result_table_with_block_info_only
 
-        query_for_stats = explore.craft_stats_query(sql_query)
-        stats_table = explore.get_query_results(query_for_stats)
-        # TODO: visualize stats_table
+    query_for_stats = explore.craft_stats_query(sql_query)
+    stats_table = explore.get_query_results(query_for_stats)
+    # TODO: visualize stats_table
 
-        table_name = 'orders'  # TODO: take in user input to get table_name
-        block_id = 0  # TODO: take in user input to get block_id
-        query_for_block_content = explore.craft_block_content_query(table_name, block_id)
-        block_content_table = explore.get_query_results(query_for_block_content)
-        # TODO: visualize block_content_table
+    table_name = 'orders'  # TODO: take in user input to get table_name
+    block_id = 0  # TODO: take in user input to get block_id
+    query_for_block_content = explore.craft_block_content_query(table_name, block_id)
+    block_content_table = explore.get_query_results(query_for_block_content)
+    # TODO: visualize block_content_table
+    interface.visualise_blocks(tables_involved, result_table_with_block_info_only, stats_table, block_content_table)
 
-    except Exception as error:
-        interface.show_message_popout(error)
+    # except Exception as error:
+    #     interface.show_message_popout(error)
+    #     raise error
 
 
 # Function to execute and visualize a SQL query.

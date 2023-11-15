@@ -30,6 +30,17 @@ def craft_ctid_query(sql_query):
     return query_with_ctid
 
 
+def get_tables_involved(sql_query):
+    result = []
+    lower_case_query = sql_query.lower()  # Use lower() to make the comparison case-insensitive
+    table_names = ['customer', 'lineitem', 'nation', 'orders', 'part', 'partsupp', 'region', 'supplier']
+    for table_name in table_names:
+        if table_name in lower_case_query:  # Check if table is used in the query
+            result.append(f"{table_name} ctid")
+
+    return result
+
+
 # Function to craft SQL query to get statistics of query, for example block accessed and buffer hits.
 # returns a sql_query
 def craft_stats_query(sql_query):

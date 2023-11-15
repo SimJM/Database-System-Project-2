@@ -1,5 +1,78 @@
 import tkinter as tk
-from tkinter import scrolledtext
+from tkinter import scrolledtext, ttk
+from explore import get_query_results, craft_ctid_query, craft_stats_query, craft_block_content_query, display_disk_blocks, disk_block_access_and_buffer
+import pandas as pd
+from pandastable import Table
+
+
+def visualise_blocks(tables_involved, table1, table2, table3):
+    # Main application window
+    root = tk.Tk()
+    root.title("Database Block Visualization")
+
+    # Top frame for SQL query input
+    top_frame = tk.Frame(root)
+    top_frame.pack(fill='x')
+
+    sql_query_label = tk.Label(top_frame, text="Enter SQL Query:")
+    sql_query_label.pack(side='left', padx=10)
+
+    sql_query_entry = tk.Entry(top_frame)
+    sql_query_entry.pack(side='left', fill='x', expand=True, padx=10)
+
+    submit_query_button = tk.Button(top_frame, text="Submit")
+    submit_query_button.pack(side='left', padx=10)
+
+    # Frame for the left table (ctid table)
+    left_frame = tk.LabelFrame(root, text="ctid Table")
+    left_frame.pack(side="left", fill='both', expand=True, padx=10, pady=10)
+
+    # Frame for the right side (stats table and block content)
+    right_frame = tk.Frame(root)
+    right_frame.pack(side="right", fill='both', expand=True, padx=10, pady=10)
+
+    # Stats frame inside right frame
+    stats_frame = tk.LabelFrame(right_frame, text="stats_table")
+    stats_frame.pack(fill='both', expand=True)
+
+    # Block content frame inside right frame
+    block_content_frame = tk.LabelFrame(right_frame, text="Block Content")
+    block_content_frame.pack(fill='both', expand=True)
+
+    # PandasTable for ctid table
+    ctid_data = pd.DataFrame(table1, columns=tables_involved)
+    ctid_table = Table(left_frame, dataframe=ctid_data)
+    ctid_table.show()
+
+    # PandasTable for stats table
+    stats_data = pd.DataFrame(table2,
+                              columns=['Relation Name', 'Number of Blocks Accessed', 'Number of Buffer Hits'])
+    stats_table = Table(stats_frame, dataframe=stats_data)
+    stats_table.show()
+
+    # Block content text area
+    block_content_text = tk.Text(block_content_frame)
+    block_content_text.pack(fill='both', expand=True)
+
+    # Table selection dropdown
+    table_names = ['customer', 'lineitem', 'nation', 'orders', 'part', 'partsupp', 'region', 'supplier']
+    selected_table = tk.StringVar(root)
+    selected_table.set(table_names[0])  # Default value
+    table_dropdown = ttk.Combobox(root, values=table_names, textvariable=selected_table)
+    table_dropdown.pack(fill='x', pady=5)
+
+    # Block ID entry
+    block_id_label = tk.Label(root, text="Enter Block ID:")
+    block_id_label.pack()
+    block_id_entry = tk.Entry(root)
+    block_id_entry.pack(fill='x')
+
+    # Visualize button
+    visualize_button = tk.Button(root, text="Visualize",
+                                 command=lambda: table3)
+    visualize_button.pack(pady=5)
+
+    root.mainloop()
 
 
 # Function to draw a node on the canvas
