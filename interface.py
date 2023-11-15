@@ -2,59 +2,74 @@ import tkinter as tk
 from tkinter import scrolledtext, ttk
 
 import explore
-from explore import get_query_results, craft_ctid_query, craft_stats_query, craft_block_content_query, display_disk_blocks, disk_block_access_and_buffer
+from explore import get_query_results, craft_ctid_query, craft_stats_query, craft_block_content_query
 import pandas as pd
 from pandastable import Table
 
 
 def visualise_blocks(tables_involved, table1, table2):
     # Main application window
+    # Main layout frames using grid
     root = tk.Tk()
     root.title("Database Block Visualization")
+    main_frame = tk.Frame(root)
+    main_frame.pack(fill='both', expand=True, padx=10, pady=10)
+    main_frame.grid_rowconfigure(1, weight=1)
+    main_frame.grid_rowconfigure(2, weight=1)
+    # Configure two columns with equal weight for the QEP and Node Details
+    main_frame.grid_columnconfigure(0, weight=1)
+    main_frame.grid_columnconfigure(1, weight=1)
+    main_frame.grid_columnconfigure(2, weight=1)
+    main_frame.grid_columnconfigure(3, weight=1)
+    main_frame.grid_columnconfigure(4, weight=1)
+    main_frame.grid_columnconfigure(5, weight=1)
 
     # Top frame for SQL query input
-    top_frame = tk.Frame(root)
-    top_frame.pack(fill='x')
+    top_frame = tk.Frame(main_frame)
+    top_frame.grid(row=0, column=0, columnspan=4, sticky='ew')
+    top_frame.grid_columnconfigure(0, weight=1)
 
     sql_query_label = tk.Label(top_frame, text="Enter SQL Query:")
-    sql_query_label.pack(side='left', padx=10)
+    sql_query_label.grid(row=0, column=0, padx=10)
 
     sql_query_entry = tk.Entry(top_frame)
-    sql_query_entry.pack(side='left', fill='x', expand=True, padx=10)
+    sql_query_entry.grid(row=0, column=1, sticky='ew', padx=10, columnspan=2)
 
     submit_query_button = tk.Button(top_frame, text="Submit")
-    submit_query_button.pack(side='left', padx=10)
+    submit_query_button.grid(row=0, column=3, padx=10)
 
-    # Frame for the left table (ctid table)
-    left_frame = tk.LabelFrame(root, text="ctid Table")
-    left_frame.pack(side="left", fill='both', expand=True, padx=10, pady=10)
-
-    # Frame for the right side (stats table and block content)
-    right_frame = tk.Frame(root)
-    right_frame.pack(side="right", fill='both', expand=True, padx=10, pady=10)
-
-    # Stats frame inside right frame
-    stats_frame = tk.LabelFrame(right_frame, text="stats_table")
-    stats_frame.pack(fill='both', expand=True)
-
-    # Block content frame inside right frame
-    block_content_frame = tk.LabelFrame(right_frame, text="Block Content")
-    block_content_frame.pack(fill='both', expand=True)
-
-    # PandasTable for ctid table
+    # ctid table frame
+    ctid_table_frame = tk.LabelFrame(main_frame, text="ctid Table")
+    ctid_table_frame.grid(row=1, column=0, columnspan=2, sticky='nsew', padx=10, pady=10)
     ctid_data = pd.DataFrame(table1, columns=tables_involved)
-    ctid_table = Table(left_frame, dataframe=ctid_data)
+    ctid_table = Table(ctid_table_frame, dataframe=ctid_data)
     ctid_table.show()
 
-    # PandasTable for stats table
+    # Stats table frame
+    stats_table_frame = tk.LabelFrame(main_frame, text="stats_table")
+    stats_table_frame.grid(row=1, column=2, columnspan=2, sticky='nsew', padx=10, pady=10)
     stats_data = pd.DataFrame(table2,
                               columns=['Relation Name', 'Number of Blocks Accessed', 'Number of Buffer Hits'])
-    stats_table = Table(stats_frame, dataframe=stats_data)
+    stats_table = Table(stats_table_frame, dataframe=stats_data)
     stats_table.show()
 
-    # Block content text area
+    # Block content frame
+    block_content_frame = tk.LabelFrame(main_frame, text="Block Content")
+    block_content_frame.grid(row=1, column=4, columnspan=2, sticky='nsew', padx=10, pady=10)
     block_content_text = tk.Text(block_content_frame)
     block_content_text.pack(fill='both', expand=True)
+
+    # QEP frame
+    qep_frame = tk.LabelFrame(main_frame, text="QEP")
+    qep_frame.grid(row=2, column=0, columnspan=3, sticky='nsew', padx=10, pady=10)
+    qep_text = tk.Text(qep_frame)
+    qep_text.pack(fill='both', expand=True)
+
+    # Node details frame
+    node_details_frame = tk.LabelFrame(main_frame, text="Node Details")
+    node_details_frame.grid(row=2, column=3, columnspan=3, sticky='nsew', padx=10, pady=10)
+    node_details_text = tk.Text(node_details_frame)
+    node_details_text.pack(fill='both', expand=True)
 
     # Table selection dropdown
     table_names = ['customer', 'lineitem', 'nation', 'orders', 'part', 'partsupp', 'region', 'supplier']
