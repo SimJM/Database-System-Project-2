@@ -3,7 +3,7 @@ import interface
 
 
 def run_explore_a():
-    sql_query = interface.get_user_input()
+    sql_query = interface.get_user_input().lower()  # Convert user input to lowercase to ease parsing algorithm
     # <<<<< TODO: for convenience only, remove before submission
     if not sql_query:
         sql_query = "SELECT nation.n_nationkey, nation.n_name, region.r_name AS region_name, nation.n_comment FROM public.nation JOIN public.region ON nation.n_regionkey = region.r_regionkey;"
