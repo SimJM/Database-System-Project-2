@@ -1,10 +1,13 @@
 import tkinter as tk
 from tkinter import scrolledtext, ttk
-import tkinter.font as tkFont
+import tkinter.font as tkf
 import pandas as pd
 from pandastable import Table
 
 from explore import get_qep_details, get_block_content, get_block_accessed_content
+
+# Define tree globally
+tree = None
 
 
 # Function to initialise and open the application in a window
@@ -14,7 +17,6 @@ def open_application_window():
         visualise_blocks()
     except Exception as error:
         show_message_popout(error)
-
 
 
 def visualise_blocks():
@@ -99,9 +101,6 @@ def visualise_blocks():
     subframe_visualise = tk.Frame(block_content_frame)
     subframe_visualise.pack(side=tk.TOP, fill=tk.X, padx=10)
 
-    # block_content_text = tk.Text(block_content_frame)
-    # block_content_text.pack(fill='both', expand=True)
-
     # QEP frame with scrollbar
     qep_frame = tk.LabelFrame(main_frame, text="QEP")
     qep_frame.grid(row=2, column=0, columnspan=3, sticky='nsew', padx=10, pady=10)
@@ -159,19 +158,34 @@ def visualise_blocks():
         print(block_id_value)
         return block_id_value
 
+    # Define a function to clear all the items present in Treeview
+    def clear_all():
+        global tree
+        if tree:
+            for item in tree.get_children():
+                tree.delete(item)
+
     def visualize_block_content():
+        global tree
+        # Call clear_all() before displaying new content
+        clear_all()
+
         table_name = get_table_name()
         block_id = capture_block_id()
         block_content_table, column_names = get_block_content(table_name, block_id)
         display_table(block_content_table, column_names)
 
     def display_table(data, column_names):
+        global tree, hscrollbar
         # Create a Frame to contain the Treeview
         tree_frame = tk.Frame(block_content_frame)
         tree_frame.pack(fill='both', expand=True)
 
         # Create a Treeview widget
-        tree = ttk.Treeview(tree_frame)
+        if not tree:
+            tree = ttk.Treeview(tree_frame)
+        else:
+            clear_all()
 
         # Check the number of columns dynamically
         num_columns = len(data[0]) if data else 0  # Check the first row's length
@@ -183,10 +197,22 @@ def visualise_blocks():
         # Add column headings
         for i, heading in enumerate([column_names[i] for i in range(num_columns)]):
             tree.heading(i, text=heading)
+            # Adjust column widths based on content
+            tree.column(i, width=tkf.Font().measure(heading))
 
         # Insert data rows
         for row in data:
             tree.insert("", "end", values=row)
+            for i, value in enumerate(row):
+                # Measure the text in each cell and adjust column width if necessary
+                col_width = tkf.Font().measure(value)
+                if tree.column(i, width=None) < col_width:
+                    tree.column(i, width=col_width)
+
+        # Add a horizontal scrollbar
+        hscrollbar = ttk.Scrollbar(tree_frame, orient='horizontal', command=tree.xview)
+        tree.configure(xscrollcommand=hscrollbar.set)
+        hscrollbar.pack(side='bottom', fill='x')
 
         # Display Treeview
         tree.pack(fill='both', expand=True)
