@@ -16,14 +16,17 @@ def open_application_window():
 
 
 def visualise_blocks():
-    user_input = ""  # variable to store user input
-    qep_details = ""  # variable to store qep_details
-
     # Function to get user input on submit
     def on_submit_query_input():
         user_input = sql_query_entry.get("1.0", tk.END).strip()
         qep_details = get_qep_details(user_input)
-        visualize_qep(qep_details)
+        # Draw the QEP on the canvas, now passing the node_details_text to draw_nodes_recursively
+        draw_nodes_recursively(qep_canvas, qep_details, 250, 50, node_details_text=node_details_text)
+
+        # Set the scroll region after everything is drawn on the canvas
+        qep_canvas.update_idletasks()  # This updates the layout so the bbox can be calculated correctly
+        qep_canvas.config(scrollregion=qep_canvas.bbox("all"))
+
         print(user_input)
         print(qep_details)
         # results_table, column_names = get_block_content()
@@ -85,16 +88,25 @@ def visualise_blocks():
     # block_content_text = tk.Text(block_content_frame)
     # block_content_text.pack(fill='both', expand=True)
 
-    # QEP frame
+    # QEP frame with scrollbar
     qep_frame = tk.LabelFrame(main_frame, text="QEP")
     qep_frame.grid(row=2, column=0, columnspan=3, sticky='nsew', padx=10, pady=10)
-    qep_text = tk.Text(qep_frame)
-    qep_text.pack(fill='both', expand=True)
 
-    # Node details frame
+    # Create the scrollbar first
+    qep_scrollbar = tk.Scrollbar(qep_frame, orient="vertical")
+    qep_scrollbar.pack(side="right", fill="y")
+
+    # Create the canvas and attach the scrollbar to it
+    qep_canvas = tk.Canvas(qep_frame, bg='white', yscrollcommand=qep_scrollbar.set)
+    qep_canvas.pack(side="left", fill='both', expand=True)
+
+    # Configure the scrollbar to control the yview of canvas
+    qep_scrollbar.config(command=qep_canvas.yview)
+
+    # Node details frame with scrolled text
     node_details_frame = tk.LabelFrame(main_frame, text="Node Details")
     node_details_frame.grid(row=2, column=3, columnspan=3, sticky='nsew', padx=10, pady=10)
-    node_details_text = tk.Text(node_details_frame)
+    node_details_text = scrolledtext.ScrolledText(node_details_frame, wrap='word')
     node_details_text.pack(fill='both', expand=True)
 
     # Table selection dropdown
@@ -200,46 +212,31 @@ def draw_line(canvas, child, parent):
                        arrow=tk.LAST)
 
 
-def display_node_details(node_data, canvas):
-    # Ensure the details frame is visible when displaying node details
-    canvas.detail_frame.pack(side=tk.RIGHT, fill=tk.Y, expand=False)
-
+def display_node_details(node_data, node_details_text):
     # Clear previous items
-    for item in canvas.detail_frame.winfo_children():
-        item.destroy()
+    node_details_text.delete('1.0', tk.END)
 
-    # Create a scrollbar for the Listbox
-    scrollbar = tk.Scrollbar(canvas.detail_frame)
-    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-    # Create a Listbox and attach the scrollbar
-    details_listbox = tk.Listbox(canvas.detail_frame, yscrollcommand=scrollbar.set, width=50)
-    details_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-    # Configure the scrollbar to scroll through the Listbox content
-    scrollbar.config(command=details_listbox.yview)
-
-    # Insert data to the Listbox, each attribute on a new line
+    # Insert data to the text widget, each attribute on a new line
     for key, value in node_data.items():
-        details_listbox.insert(tk.END, f"{key}: {value}")
+        node_details_text.insert(tk.END, f"{key}: {value}\n")
 
 
-def draw_nodes_recursively(canvas, plan, x, y, level=0, parent=None):
+def draw_nodes_recursively(canvas, plan, x, y, node_details_text, level=0, parent=None):
     # Check for the existence of 'Relation Name' and include it in the node text if it's a leaf node
     relation_name = plan.get('Relation Name', '')
     node_type = plan.get('Node Type', 'Unknown Node')
     total_cost = plan.get('Total Cost', 'N/A')
     node_text = f"{node_type}\nCost={total_cost}"
-    if relation_name and not plan.get('Plans'):  # If there is a relation name and no child plans, get the relation
+    if relation_name and not plan.get('Plans'):  # If there is a relation name and no child plans
         node_text += f"\nRelation: {relation_name}"
 
-    # node_data pass to the draw_node
+    # node_data passed to the draw_node
     node_data = {k: v for k, v in plan.items() if k not in ['Plans']}
     node, text_id = draw_node(canvas, node_text, x, y, node_data)
 
-    # Bind the click to both the rectangle and text
+    # Bind the click to both the rectangle and text, passing the node_details_text widget
     for item in (node, text_id):
-        canvas.tag_bind(item, '<Button-1>', lambda event, nd=node_data: display_node_details(nd, canvas))
+        canvas.tag_bind(item, '<Button-1>', lambda event, nd=node_data: display_node_details(nd, node_details_text))
 
     if parent:
         draw_line(canvas, node, parent)
@@ -252,26 +249,8 @@ def draw_nodes_recursively(canvas, plan, x, y, level=0, parent=None):
         child_offset = (num_children - 1) * horizontal_distance // 2
         for i, sub_plan in enumerate(plan['Plans']):
             child_x = x + (i * horizontal_distance) - child_offset
-            child_y = y + (vertical_distance * (level + 1))
-            draw_nodes_recursively(canvas, sub_plan, child_x, child_y, level + 1, node)
-
-
-def visualize_qep(qep_details):
-    root = tk.Tk()
-    root.title('QEP Visualization')
-
-    # Create a frame for the canvas and details table
-    frame = tk.Frame(root)
-    frame.pack(fill=tk.BOTH, expand=True)
-
-    canvas = tk.Canvas(frame, width=600, height=600, bg='white')
-    canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-    canvas.detail_frame = tk.Frame(frame, width=200)
-
-    draw_nodes_recursively(canvas, qep_details, 250, 50)
-
-    root.mainloop()
+            child_y = y + vertical_distance + (vertical_distance * level)
+            draw_nodes_recursively(canvas, sub_plan, child_x, child_y, node_details_text, level + 1, node)
 
 
 # Function to display message
