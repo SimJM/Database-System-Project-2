@@ -5,8 +5,8 @@ import psycopg2
 def connect():
     # Edit your configurations below
     conn = psycopg2.connect(
-        dbname='estherteo',
-        user='estherteo',
+        dbname='dbname',
+        user='user',
         password='password',
         host='localhost',
         port='5432'

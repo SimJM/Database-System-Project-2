@@ -3,19 +3,35 @@ from tkinter import scrolledtext, ttk
 import pandas as pd
 from pandastable import Table
 
-import explore
+from explore import get_qep_details, get_block_content
 
 
 # Function to initialise and open the application in a window
 def open_application_window():
     print('Opening application')
-    run_explore_a()
+    try:
+        visualise_blocks()
+    except Exception as error:
+        show_message_popout(error)
 
 
-def visualise_blocks(tables_involved, table1, table2):
+def visualise_blocks():
+    user_input = ""  # variable to store user input
+    qep_details = ""  # variable to store qep_details
+
+    # Function to get user input on submit
+    def on_submit_query_input():
+        user_input = sql_query_entry.get("1.0", tk.END).strip()
+        qep_details = get_qep_details(user_input)
+        visualize_qep(qep_details)
+        print(user_input)
+        print(qep_details)
+        # results_table, column_names = get_block_content()
+
     # Main application window
     # Main layout frames using grid
     root = tk.Tk()
+
     root.title("Database Block Visualization")
     main_frame = tk.Frame(root)
     main_frame.pack(fill='both', expand=True, padx=10, pady=10)
@@ -37,26 +53,18 @@ def visualise_blocks(tables_involved, table1, table2):
     sql_query_label = tk.Label(top_frame, text="Enter SQL Query:")
     sql_query_label.grid(row=0, column=0, padx=10)
 
-    sql_query_entry = tk.Entry(top_frame)
+    sql_query_entry = tk.Text(top_frame, height=4, width=40)
     sql_query_entry.grid(row=0, column=1, sticky='ew', padx=10, columnspan=2)
 
-    submit_query_button = tk.Button(top_frame, text="Submit")
+    submit_query_button = tk.Button(top_frame, text="Submit", command=on_submit_query_input)
     submit_query_button.grid(row=0, column=3, padx=10)
 
-    # ctid table frame
-    ctid_table_frame = tk.LabelFrame(main_frame, text="ctid Table")
-    ctid_table_frame.grid(row=1, column=0, columnspan=2, sticky='nsew', padx=10, pady=10)
-    ctid_data = pd.DataFrame(table1, columns=tables_involved)
-    ctid_table = Table(ctid_table_frame, dataframe=ctid_data)
-    ctid_table.show()
-
-    # Stats table frame
-    stats_table_frame = tk.LabelFrame(main_frame, text="stats_table")
-    stats_table_frame.grid(row=1, column=2, columnspan=2, sticky='nsew', padx=10, pady=10)
-    stats_data = pd.DataFrame(table2,
-                              columns=['Relation Name', 'Number of Blocks Accessed', 'Number of Buffer Hits'])
-    stats_table = Table(stats_table_frame, dataframe=stats_data)
-    stats_table.show()
+    # # ctid table frame
+    # ctid_table_frame = tk.LabelFrame(main_frame, text="ctid Table")
+    # ctid_table_frame.grid(row=1, column=0, columnspan=2, sticky='nsew', padx=10, pady=10)
+    # ctid_data = pd.DataFrame(table1, columns=tables_involved)
+    # ctid_table = Table(ctid_table_frame, dataframe=ctid_data)
+    # ctid_table.show()
 
     # Block content frame
     block_content_frame = tk.LabelFrame(main_frame, text="Block Content", width=400, height=300)
@@ -125,8 +133,7 @@ def visualise_blocks(tables_involved, table1, table2):
     def visualize_block_content():
         table_name = get_table_name()
         block_id = capture_block_id()
-        query_for_block_content = explore.craft_block_content_query(table_name, block_id)
-        block_content_table, column_names = explore.get_query_results(query_for_block_content)
+        block_content_table, column_names = get_block_content(table_name, block_id)
         display_table(block_content_table, column_names)
 
     def display_table(data, column_names):
@@ -267,37 +274,6 @@ def visualize_qep(qep_details):
     root.mainloop()
 
 
-# Function to display window to take in user input
-def get_user_input():
-    def on_submit():
-        text = entry.get("1.0", tk.END).strip()
-        result_label.config(text=f"You entered: {text}")
-        root.quit()  # To exit the main loop
-        return text
-
-    root = tk.Tk()
-    root.title("User SQL Input")
-
-    label = tk.Label(root, text="Enter a SQL query:")
-    label.pack()
-
-    entry = scrolledtext.ScrolledText(root, wrap=tk.WORD, width=40, height=10)
-    entry.pack(expand=True, fill="both")
-
-    result_label = tk.Label(root, text="")
-    result_label.pack()
-
-    submit_button = tk.Button(root, text="Submit", command=on_submit)
-    submit_button.pack()
-
-    center_window(root, 400, 300)
-    root.mainloop()
-
-    # After the user submits the input, call the callback to get the user input
-    user_input = on_submit()
-    return user_input
-
-
 # Function to display message
 def show_message_popout(message):
     def dismiss():
@@ -325,48 +301,3 @@ def center_window(root, width, height):
     y = (screen_height - height) // 2
 
     root.geometry(f"{width}x{height}+{x}+{y}")
-
-
-def run_explore_a():
-    sql_query = get_user_input().lower()  # Convert user input to lowercase to ease parsing algorithm
-    # <<<<< TODO: for convenience only, remove before submission
-    if not sql_query:
-        sql_query = "SELECT nation.n_nationkey, nation.n_name, region.r_name AS region_name, nation.n_comment FROM public.nation JOIN public.region ON nation.n_regionkey = region.r_regionkey;"
-    # >>>>>
-
-    #try:
-    explore.detect_injection(sql_query)  # Prevent SQL injection to change data in database.
-    tables_involved = explore.get_tables_involved(sql_query)
-
-    query_with_ctid = explore.craft_ctid_query(sql_query)
-    result_table_with_block_info_only, column_name = explore.get_query_results(query_with_ctid)
-
-    query_for_stats = explore.craft_stats_query(sql_query)
-    stats_table, column_name = explore.get_query_results(query_for_stats)
-
-    # table_name = 'orders'
-    # block_id = 0  # TODO: take in user input to get block_id
-    # query_for_block_content = explore.craft_block_content_query(table_name, block_id)
-    # block_content_table = explore.get_query_results(query_for_block_content)
-    # TODO: visualize block_content_table
-    visualise_blocks(tables_involved, result_table_with_block_info_only, stats_table)
-
-    # except Exception as error:
-    #     interface.show_message_popout(error)
-    #     raise error
-
-
-# Function to execute and visualize a SQL query.
-def run_explore_b():
-    sql_query = get_user_input()
-    # <<<<< TODO: for convenience only, remove before submission
-    if not sql_query:
-        sql_query = "SELECT nation.n_nationkey, nation.n_name, region.r_name AS region_name, nation.n_comment FROM public.nation JOIN public.region ON nation.n_regionkey = region.r_regionkey;"
-    # >>>>>
-
-    try:
-        explore.detect_injection(sql_query)  # Prevent SQL injection to change data in database.
-        qep_details = explore.get_qep_details(sql_query)
-        visualize_qep(qep_details)
-    except Exception as error:
-        show_message_popout(error)
