@@ -20,6 +20,9 @@ def visualise_blocks():
     def on_submit_query_input():
         user_input = sql_query_entry.get("1.0", tk.END).strip()
         qep_details = get_qep_details(user_input)
+
+        qep_canvas.delete("all")
+        node_details_text.delete('1.0', tk.END)  # Clear the node details text widget
         # Draw the QEP on the canvas, now passing the node_details_text to draw_nodes_recursively
         draw_nodes_recursively(qep_canvas, qep_details, 250, 50, node_details_text=node_details_text)
 
@@ -249,7 +252,8 @@ def draw_nodes_recursively(canvas, plan, x, y, node_details_text, level=0, paren
         child_offset = (num_children - 1) * horizontal_distance // 2
         for i, sub_plan in enumerate(plan['Plans']):
             child_x = x + (i * horizontal_distance) - child_offset
-            child_y = y + vertical_distance + (vertical_distance * level)
+            # Child y is now calculated as a constant offset from the parent y, not based on level
+            child_y = y + vertical_distance
             draw_nodes_recursively(canvas, sub_plan, child_x, child_y, node_details_text, level + 1, node)
 
 
