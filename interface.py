@@ -4,7 +4,7 @@ import tkinter.font as tkFont
 import pandas as pd
 from pandastable import Table
 
-from explore import get_qep_details, get_block_content
+from explore import get_qep_details, get_block_content, get_block_accessed_content
 
 
 # Function to initialise and open the application in a window
@@ -24,7 +24,10 @@ def visualise_blocks():
     def on_submit_query_input():
         user_input = sql_query_entry.get("1.0", tk.END).strip()
         qep_details = get_qep_details(user_input)
-
+        block_accessed_details, block_accessed_columns = get_block_accessed_content(user_input)
+        ctid_data = pd.DataFrame(block_accessed_details, columns=block_accessed_columns)
+        ctid_table = Table(ctid_table_frame, dataframe=ctid_data)
+        ctid_table.show()
         qep_canvas.delete("all")
 
         # Enable the widget before clearing it and then disable it again
@@ -74,12 +77,10 @@ def visualise_blocks():
     submit_query_button = tk.Button(top_frame, text="Submit", command=on_submit_query_input)
     submit_query_button.grid(row=0, column=3, padx=10)
 
-    # # ctid table frame
-    # ctid_table_frame = tk.LabelFrame(main_frame, text="ctid Table")
-    # ctid_table_frame.grid(row=1, column=0, columnspan=2, sticky='nsew', padx=10, pady=10)
-    # ctid_data = pd.DataFrame(table1, columns=tables_involved)
-    # ctid_table = Table(ctid_table_frame, dataframe=ctid_data)
-    # ctid_table.show()
+    # ctid table frame
+    ctid_table_frame = tk.LabelFrame(main_frame, text="ctid Table")
+    ctid_table_frame.grid(row=1, column=0, columnspan=2, sticky='nsew', padx=10, pady=10)
+
 
     # Block content frame
     block_content_frame = tk.LabelFrame(main_frame, text="Block Content", width=400, height=300)
