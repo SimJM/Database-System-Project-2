@@ -53,7 +53,7 @@ def craft_stats_query(sql_query):
 # Function to craft SQL query to get block content.
 # returns a sql_query
 def craft_block_content_query(table_name, block_id):
-    query = f"SELECT * FROM {table_name} WHERE (ctid::text::point)[0] = {block_id}"
+    query = f"SELECT * FROM {table_name} WHERE (ctid::text::point)[0] = {block_id};"
     return query
 
 
@@ -75,12 +75,13 @@ def get_query_results(sql_query):
 
     print(f"Executing SQL query: {sql_query}")
     cursor.execute(sql_query)
+    column_names = [desc[0] for desc in cursor.description]
     results_table = cursor.fetchall()
 
     # Close the cursor and the database connection.
     cursor.close()
     conn.close()
-    return results_table
+    return results_table, column_names
 
 
 # Function to execute and visualize a SQL query.

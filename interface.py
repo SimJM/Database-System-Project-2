@@ -59,10 +59,23 @@ def visualise_blocks(tables_involved, table1, table2):
     stats_table.show()
 
     # Block content frame
-    block_content_frame = tk.LabelFrame(main_frame, text="Block Content")
+    block_content_frame = tk.LabelFrame(main_frame, text="Block Content", width=400, height=300)
     block_content_frame.grid(row=1, column=4, columnspan=2, sticky='nsew', padx=10, pady=10)
-    block_content_text = tk.Text(block_content_frame)
-    block_content_text.pack(fill='both', expand=True)
+    block_content_frame.grid_propagate(False)
+
+    # Configure column weight to prevent expansion
+    main_frame.columnconfigure(3, weight=0)  # Assuming the block_content_frame is in the fourth column
+
+    # Create a sub-frame within the block content frame
+    subframe_dropdown = tk.Frame(block_content_frame)
+    subframe_dropdown.pack(side=tk.TOP, fill=tk.X, padx=10)
+
+    # Create another subframe for the visualise button
+    subframe_visualise = tk.Frame(block_content_frame)
+    subframe_visualise.pack(side=tk.TOP, fill=tk.X, padx=10)
+
+    # block_content_text = tk.Text(block_content_frame)
+    # block_content_text.pack(fill='both', expand=True)
 
     # QEP frame
     qep_frame = tk.LabelFrame(main_frame, text="QEP")
@@ -80,24 +93,73 @@ def visualise_blocks(tables_involved, table1, table2):
     table_names = ['customer', 'lineitem', 'nation', 'orders', 'part', 'partsupp', 'region', 'supplier']
     selected_table = tk.StringVar(root)
     selected_table.set(table_names[0])  # Default value
-    table_dropdown = ttk.Combobox(root, values=table_names, textvariable=selected_table)
-    table_dropdown.pack(fill='x', pady=5)
+    # Label for the dropdown
+    dropdown_label = tk.Label(subframe_dropdown, text="Select a table:")
+    dropdown_label.pack(side=tk.LEFT)
+    table_dropdown = ttk.Combobox(subframe_dropdown, values=table_names, textvariable=selected_table)
+    # Pack the dropdown to fill 75% of the width
+    table_dropdown.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+    # Insert a spacer to center the elements
+    spacer = tk.Frame(subframe_dropdown)
+    spacer.pack(side=tk.LEFT, padx=(10, 0))  # Adjust padx as needed for spacing
 
     # Block ID entry
-    block_id_label = tk.Label(root, text="Enter Block ID:")
-    block_id_label.pack()
-    block_id_entry = tk.Entry(root)
-    block_id_entry.pack(fill='x')
+    block_id_label = tk.Label(subframe_dropdown, text="Enter Block ID:")
+    block_id_label.pack(side=tk.LEFT)
+    block_id_entry = tk.Entry(subframe_dropdown)
+    block_id_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, pady=10)
 
-    table_name = 'orders'
-    block_id = 0  # TODO: take in user input to get block_id
-    query_for_block_content = explore.craft_block_content_query(table_name, block_id)
-    block_content_table = explore.get_query_results(query_for_block_content)
+    # Function to retrieve the selected table
+    def get_table_name():
+        selection = selected_table.get()
+        print(selection)
+        return selection
+
+    # Function to retrieve the entered block ID value
+    def capture_block_id():
+        block_id_value = block_id_entry.get()
+        print(block_id_value)
+        return block_id_value
+
+    def visualize_block_content():
+        table_name = get_table_name()
+        block_id = capture_block_id()
+        query_for_block_content = explore.craft_block_content_query(table_name, block_id)
+        block_content_table, column_names = explore.get_query_results(query_for_block_content)
+        display_table(block_content_table, column_names)
+
+    def display_table(data, column_names):
+        # Create a Frame to contain the Treeview
+        tree_frame = tk.Frame(block_content_frame)
+        tree_frame.pack(fill='both', expand=True)
+
+        # Create a Treeview widget
+        tree = ttk.Treeview(tree_frame)
+
+        # Check the number of columns dynamically
+        num_columns = len(data[0]) if data else 0  # Check the first row's length
+
+        # Define columns
+        tree["columns"] = list(range(num_columns))
+        tree["show"] = "headings"
+
+        # Add column headings
+        for i, heading in enumerate([column_names[i] for i in range(num_columns)]):
+            tree.heading(i, text=heading)
+
+        # Insert data rows
+        for row in data:
+            tree.insert("", "end", values=row)
+
+        # Display Treeview
+        tree.pack(fill='both', expand=True)
+
+        root.mainloop()
 
     # Visualize button
-    visualize_button = tk.Button(root, text="Visualize",
-                                 command=lambda: block_content_table)
-    visualize_button.pack(pady=5)
+    visualize_button = tk.Button(subframe_visualise, text="Visualize", command=visualize_block_content)
+    visualize_button.pack(side=tk.BOTTOM, pady=(0, 5))
 
     root.mainloop()
 
@@ -277,10 +339,10 @@ def run_explore_a():
     tables_involved = explore.get_tables_involved(sql_query)
 
     query_with_ctid = explore.craft_ctid_query(sql_query)
-    result_table_with_block_info_only = explore.get_query_results(query_with_ctid)
+    result_table_with_block_info_only, column_name = explore.get_query_results(query_with_ctid)
 
     query_for_stats = explore.craft_stats_query(sql_query)
-    stats_table = explore.get_query_results(query_for_stats)
+    stats_table, column_name = explore.get_query_results(query_for_stats)
 
     # table_name = 'orders'
     # block_id = 0  # TODO: take in user input to get block_id
