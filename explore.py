@@ -12,6 +12,13 @@ def get_block_content(table_name, block_id):
     return results_table, column_names
 
 
+# Function to get ctid table
+def get_block_accessed_content(user_input):
+    query = craft_ctid_query(user_input)
+    results_table, column_names = get_query_results(query)
+    return results_table, column_names
+
+
 # Part (b) Visualizing different aspects of the QEP including buffer size, cost, etc
 # Function to get query plan details
 def get_qep_details(sql_query):
@@ -99,6 +106,91 @@ def detect_injection(sql_query):
         raise ValueError("ALTER statement is not allowed.")
     elif "INDEX" in sql_query_upper:
         raise ValueError("INDEX statement is not allowed.")
+
+
+def craft_ctid_query(sql_query):
+    sql_query = process_user_input(sql_query)
+    block_sub_queries(sql_query)  # Block queries with nested queries
+    sql_query = remove_group_having_aggregate(sql_query)
+
+    temp = sql_query.split("from", 1)
+
+    front = temp[0].strip().rstrip(',')
+    back = temp[1].strip().rstrip(';')
+    sql_query = f"{front} FROM {back}"
+
+    # Split the string at the first occurrence of "SELECT"
+    parts = re.split(r'\bSELECT\b', sql_query, maxsplit=1, flags=re.IGNORECASE)
+
+    # Construct ctid columns into be added into query
+    columns_to_add, renamed_columns_to_add = construct_ctid_column(sql_query)
+
+    remaining_part = parts[1].strip()
+
+    # Append new projection with the initial query
+    query_with_ctid = f"SELECT {columns_to_add} FROM (SELECT {renamed_columns_to_add}, {remaining_part}) AS results_table"
+
+    return query_with_ctid
+
+
+# Function to block queries with sub queries as they are not supported by our program
+def block_sub_queries(sql_query):
+    sql_query_upper = sql_query.upper()
+    num_of_sub_queries = sql_query_upper.count('SELECT')
+    if num_of_sub_queries > 1:
+        raise AssertionError("Sub queries are not allowed.")
+
+
+# Function to remove GROUP BY clause, HAVING clause and aggregate functions
+def remove_group_having_aggregate(sql_query):
+    # Function to remove aggregate functions
+    def remove_aggregate_functions(query):
+        # Define a dictionary to map aggregate functions to their replacements
+        substitutions = {
+            "sum(": "(",
+            "avg(": "(",
+            "min(": "(",
+            "max(": "(",
+            "count(*)": "1",
+            "count(": "(",
+        }
+
+        for old, new in substitutions.items():
+            query = query.replace(old, new)
+
+        return query
+
+    # Remove aggregate functions
+    sql_query = remove_aggregate_functions(sql_query)
+
+    # Remove GROUP BY clause
+    sql_query = re.sub(r'\bGROUP\s+BY\b[^;]+', '', sql_query, flags=re.IGNORECASE)
+
+    # Remove HAVING clause
+    sql_query = re.sub(r'\bHAVING\b[^;]+', '', sql_query, flags=re.IGNORECASE)
+
+    return sql_query
+
+
+# Function to construct ctid columns to add into query
+def construct_ctid_column(query):
+    result = ""
+    result_with_rename = ""
+    lower_case_query = query.lower()  # Use lower() to make the comparison case-insensitive
+    table_names = ['customer', 'lineitem', 'nation', 'orders', 'part', 'partsupp', 'region', 'supplier']
+    for table_name in table_names:
+        if table_name in lower_case_query:  # Check if table is used in the query
+            column_name = f"{table_name}_block_info"
+            rename_column_name = f"{table_name}.ctid as {column_name}"
+            if result_with_rename:
+                # append comma, and new column name
+                result = f"{result}, {column_name}"
+                result_with_rename = f"{result_with_rename}, {rename_column_name}"
+            else:
+                result = column_name
+                result_with_rename = rename_column_name
+
+    return result, result_with_rename
 
 
 if __name__ == "__main__":
