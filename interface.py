@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import scrolledtext, ttk
+import tkinter.font as tkFont
 import pandas as pd
 from pandastable import Table
 
@@ -15,14 +16,22 @@ def open_application_window():
         show_message_popout(error)
 
 
+
 def visualise_blocks():
+    def on_mousewheel(event):
+        qep_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
     # Function to get user input on submit
     def on_submit_query_input():
         user_input = sql_query_entry.get("1.0", tk.END).strip()
         qep_details = get_qep_details(user_input)
 
         qep_canvas.delete("all")
+
+        # Enable the widget before clearing it and then disable it again
+        node_details_text.config(state='normal')  # Enable the widget to clear
         node_details_text.delete('1.0', tk.END)  # Clear the node details text widget
+        node_details_text.config(state='disabled')  # Disable the widget to prevent user from typing
+
         # Draw the QEP on the canvas, now passing the node_details_text to draw_nodes_recursively
         draw_nodes_recursively(qep_canvas, qep_details, 250, 50, node_details_text=node_details_text)
 
@@ -77,6 +86,7 @@ def visualise_blocks():
     block_content_frame.grid(row=1, column=4, columnspan=2, sticky='nsew', padx=10, pady=10)
     block_content_frame.grid_propagate(False)
 
+
     # Configure column weight to prevent expansion
     main_frame.columnconfigure(3, weight=0)  # Assuming the block_content_frame is in the fourth column
 
@@ -105,6 +115,9 @@ def visualise_blocks():
 
     # Configure the scrollbar to control the yview of canvas
     qep_scrollbar.config(command=qep_canvas.yview)
+
+    # Bind the mousewheel event to the on_mousewheel function
+    qep_canvas.bind("<MouseWheel>", on_mousewheel)
 
     # Node details frame with scrolled text
     node_details_frame = tk.LabelFrame(main_frame, text="Node Details")
@@ -216,12 +229,19 @@ def draw_line(canvas, child, parent):
 
 
 def display_node_details(node_data, node_details_text):
+    # Enable the widget to clear and insert the new text
+    node_details_text.config(state='normal')
+
     # Clear previous items
     node_details_text.delete('1.0', tk.END)
 
     # Insert data to the text widget, each attribute on a new line
     for key, value in node_data.items():
         node_details_text.insert(tk.END, f"{key}: {value}\n")
+
+    # Disable the widget to prevent user from typing
+    node_details_text.config(state='disabled')
+
 
 
 def draw_nodes_recursively(canvas, plan, x, y, node_details_text, level=0, parent=None):
