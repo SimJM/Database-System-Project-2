@@ -17,12 +17,7 @@ if __name__ == "__main__":
             file_number = i + 1
             path = f"test_queries/{file_number}.sql"
             query = read_sql_query(path)
-            query = explore.process_user_input(query)
-
-            query = explore.craft_ctid_query(query)
-            # query = explore.craft_stats_query(query)
-
-            explore.get_query_results(query)
+            explore.get_block_accessed_content(query)
             count_passed += 1
             print(f"\033[32mSuccess! {file_number}.sql\033[0m")
         except AssertionError as error:

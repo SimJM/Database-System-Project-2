@@ -4,51 +4,25 @@ import database
 
 
 # Part (a) Visualization of disk blocks accessed by the query
-# Function to craft sql query for block accessed.
-# returns a sql_query
-def craft_ctid_query(sql_query):
-    sql_query = process_user_input(sql_query)
-    sql_query = remove_group_having_aggregate(sql_query)
-
-    temp = sql_query.split("from", 1)
-
-    front = temp[0].strip().rstrip(',')
-    back = temp[1].strip().rstrip(';')
-    sql_query = f"{front} FROM {back}"
-
-    # Split the string at the first occurrence of "SELECT"
-    parts = re.split(r'\bSELECT\b', sql_query, maxsplit=1, flags=re.IGNORECASE)
-
-    # Construct ctid columns into be added into query
-    columns_to_add, renamed_columns_to_add = construct_ctid_column(sql_query)
-
-    remaining_part = parts[1].strip()
-
-    # Append new projection with the initial query
-    query_with_ctid = f"SELECT {columns_to_add} FROM (SELECT {renamed_columns_to_add}, {remaining_part}) AS results_table"
-
-    return query_with_ctid
+# Function to get block content
+def get_block_content(table_name, block_id):
+    # Craft SQL query to get block content.
+    query = f"SELECT * FROM {table_name} WHERE (ctid::text::point)[0] = {block_id};"
+    results_table, column_names = get_query_results(query)
+    return results_table, column_names
 
 
-# Function to craft SQL query to get statistics of query, for example block accessed and buffer hits.
-# returns a sql_query
-def craft_stats_query(sql_query):
-    base_query = "SELECT relname, heap_blks_read, heap_blks_hit FROM pg_statio_all_tables"
-    table_name_condition = construct_table_name_condition(sql_query)  # Construct conditions to be added into query
-    stats_query = f"{base_query}  {table_name_condition}"  # Append base query with conditions
-    return stats_query
-
-
-# Function to craft SQL query to get block content.
-# returns a sql_query
-def craft_block_content_query(table_name, block_id):
-    query = f"SELECT * FROM {table_name} WHERE (ctid::text::point)[0] = {block_id}"
-    return query
+# Function to get ctid table
+def get_block_accessed_content(user_input):
+    query = craft_ctid_query(user_input)
+    results_table, column_names = get_query_results(query)
+    return results_table, column_names
 
 
 # Part (b) Visualizing different aspects of the QEP including buffer size, cost, etc
 # Function to get query plan details
 def get_qep_details(sql_query):
+    detect_injection(sql_query)
     query_plan = generate_query_plan(sql_query)
     qep_details = extract_qep_details(query_plan)
     return qep_details
@@ -64,12 +38,13 @@ def get_query_results(sql_query):
 
     print(f"Executing SQL query: {sql_query}")
     cursor.execute(sql_query)
+    column_names = [desc[0] for desc in cursor.description]
     results_table = cursor.fetchall()
 
     # Close the cursor and the database connection.
     cursor.close()
     conn.close()
-    return results_table
+    return results_table, column_names
 
 
 # Function to execute and visualize a SQL query.
@@ -106,7 +81,6 @@ def extract_qep_details(query_plan):
 # Function to parse user input and check for SQL injection
 def process_user_input(input_query):
     detect_injection(input_query)  # Check for SQL injection
-    block_sub_queries(input_query)   # Block queries with sub queries
     query = input_query.strip()  # Remove trailing spaces
     query = query.rstrip(';')  # Remove semicolon (if any) from query
     query = query.lower()  # Convert input to lowercase
@@ -132,6 +106,31 @@ def detect_injection(sql_query):
         raise ValueError("ALTER statement is not allowed.")
     elif "INDEX" in sql_query_upper:
         raise ValueError("INDEX statement is not allowed.")
+
+
+def craft_ctid_query(sql_query):
+    sql_query = process_user_input(sql_query)
+    block_sub_queries(sql_query)  # Block queries with nested queries
+    sql_query = remove_group_having_aggregate(sql_query)
+
+    temp = sql_query.split("from", 1)
+
+    front = temp[0].strip().rstrip(',')
+    back = temp[1].strip().rstrip(';')
+    sql_query = f"{front} FROM {back}"
+
+    # Split the string at the first occurrence of "SELECT"
+    parts = re.split(r'\bSELECT\b', sql_query, maxsplit=1, flags=re.IGNORECASE)
+
+    # Construct ctid columns into be added into query
+    columns_to_add, renamed_columns_to_add = construct_ctid_column(sql_query)
+
+    remaining_part = parts[1].strip()
+
+    # Append new projection with the initial query
+    query_with_ctid = f"SELECT {columns_to_add} FROM (SELECT {renamed_columns_to_add}, {remaining_part}) AS results_table"
+
+    return query_with_ctid
 
 
 # Function to block queries with sub queries as they are not supported by our program
@@ -194,24 +193,7 @@ def construct_ctid_column(query):
     return result, result_with_rename
 
 
-# Function to construct relname conditions
-def construct_table_name_condition(query):
-    result = ""
-    lower_case_query = query.lower()  # Use lower() to make the comparison case-insensitive
-    table_names = ['customer', 'lineitem', 'nation', 'orders', 'part', 'partsupp', 'region', 'supplier']
-    for table_name in table_names:
-        if table_name in lower_case_query:  # Check if table is used in the query
-            if result:
-                result = f"{result} OR relname = '{table_name}'"  # Append comma and new condition
-            else:
-                result = f"WHERE relname = '{table_name}'"
-
-    return result
-
-
 if __name__ == "__main__":
     x = "SELECT nation.n_nationkey, nation.n_name, region.r_name AS region_name, nation.n_comment FROM public.nation JOIN public.region ON nation.n_regionkey = region.r_regionkey;"
     x = x.lower()
-    print(craft_ctid_query(x))
-    print(craft_stats_query(x))
-    print(craft_block_content_query('orders', 0))
+    print(get_block_content('orders', 0))
