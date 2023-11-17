@@ -14,81 +14,88 @@ tree = None
 def open_application_window():
     print('Opening application')
     try:
-        visualise_blocks()
+        visualize()
     except Exception as error:
         show_message_popout(error)
 
 
-def visualise_blocks():
+def visualize():
     def on_mousewheel(event):
         qep_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
     # Function to get user input on submit
     def on_submit_query_input():
-        user_input = sql_query_entry.get("1.0", tk.END).strip()
-        qep_details = get_qep_details(user_input)
-        block_accessed_details, block_accessed_columns = get_block_accessed_content(user_input)
-        ctid_data = pd.DataFrame(block_accessed_details, columns=block_accessed_columns)
-        ctid_table = Table(ctid_table_frame, dataframe=ctid_data)
-        ctid_table.show()
-        qep_canvas.delete("all")
+        try:
+            user_input = sql_query_entry.get("1.0", tk.END).strip()
+            qep_details = get_qep_details(user_input)
+            block_accessed_details, block_accessed_columns = get_block_accessed_content(user_input)
+            ctid_data = pd.DataFrame(block_accessed_details, columns=block_accessed_columns)
+            ctid_table = Table(ctid_table_frame, dataframe=ctid_data)
+            ctid_table.show()
+            qep_canvas.delete("all")
 
-        # Enable the widget before clearing it and then disable it again
-        node_details_text.config(state='normal')  # Enable the widget to clear
-        node_details_text.delete('1.0', tk.END)  # Clear the node details text widget
-        node_details_text.config(state='disabled')  # Disable the widget to prevent user from typing
+            # Enable the widget before clearing it and then disable it again
+            node_details_text.config(state='normal')  # Enable the widget to clear
+            node_details_text.delete('1.0', tk.END)  # Clear the node details text widget
+            node_details_text.config(state='disabled')  # Disable the widget to prevent user from typing
 
-        # Draw the QEP on the canvas, now passing the node_details_text to draw_nodes_recursively
-        draw_nodes_recursively(qep_canvas, qep_details, 250, 50, node_details_text=node_details_text)
+            # Draw the QEP on the canvas, now passing the node_details_text to draw_nodes_recursively
+            draw_nodes_recursively(qep_canvas, qep_details, 250, 50, node_details_text=node_details_text)
 
-        # Set the scroll region after everything is drawn on the canvas
-        qep_canvas.update_idletasks()  # This updates the layout so the bbox can be calculated correctly
-        qep_canvas.config(scrollregion=qep_canvas.bbox("all"))
-
-        print(user_input)
-        print(qep_details)
-        # results_table, column_names = get_block_content()
+            # Set the scroll region after everything is drawn on the canvas
+            qep_canvas.update_idletasks()  # This updates the layout so the bbox can be calculated correctly
+            qep_canvas.config(scrollregion=qep_canvas.bbox("all"))
+        except Exception as error:
+            show_message_popout(error)
 
     # Main application window
     # Main layout frames using grid
     root = tk.Tk()
+    # root.resizable(False, False)
+
+    screen_width = root.winfo_screenwidth() - 100
+    screen_height = root.winfo_screenheight() - 100
+
+    root.geometry(f"{screen_width}x{screen_height}")
 
     root.title("Database Block Visualization")
     main_frame = tk.Frame(root)
     main_frame.pack(fill='both', expand=True, padx=10, pady=10)
+
+    # Row Config
+    main_frame.grid_rowconfigure(0, weight=1)
     main_frame.grid_rowconfigure(1, weight=1)
     main_frame.grid_rowconfigure(2, weight=1)
-    # Configure two columns with equal weight for the QEP and Node Details
+    main_frame.grid_rowconfigure(4, weight=1)
+    # Col Config
     main_frame.grid_columnconfigure(0, weight=1)
     main_frame.grid_columnconfigure(1, weight=1)
-    main_frame.grid_columnconfigure(2, weight=1)
-    main_frame.grid_columnconfigure(3, weight=1)
-    main_frame.grid_columnconfigure(4, weight=1)
-    main_frame.grid_columnconfigure(5, weight=1)
 
     # Top frame for SQL query input
     top_frame = tk.Frame(main_frame)
     top_frame.grid(row=0, column=0, columnspan=4, sticky='ew')
     top_frame.grid_columnconfigure(0, weight=1)
+    top_frame.grid_columnconfigure(1, weight=3)
+    top_frame.grid_columnconfigure(2, weight=3)
+    top_frame.grid_columnconfigure(3, weight=3)
 
     sql_query_label = tk.Label(top_frame, text="Enter SQL Query:")
-    sql_query_label.grid(row=0, column=0, padx=10)
+    sql_query_label.grid(row=0, column=0)
 
-    sql_query_entry = tk.Text(top_frame, height=4, width=40)
-    sql_query_entry.grid(row=0, column=1, sticky='ew', padx=10, columnspan=2)
+    sql_query_entry = tk.Text(top_frame, height=4)
+    sql_query_entry.grid(row=0, column=1, sticky='ew', padx=10, columnspan=3)
 
     submit_query_button = tk.Button(top_frame, text="Submit", command=on_submit_query_input)
-    submit_query_button.grid(row=0, column=3, padx=10)
+    submit_query_button.grid(row=0, column=4, padx=10, sticky='w')
 
     # ctid table frame
-    ctid_table_frame = tk.LabelFrame(main_frame, text="ctid Table")
-    ctid_table_frame.grid(row=1, column=0, columnspan=2, sticky='nsew', padx=10, pady=10)
-
+    ctid_table_frame = tk.LabelFrame(main_frame, text="Block Accessed Information Table", width=400, height=100)
+    ctid_table_frame.grid(row=1, column=0, columnspan=4, sticky='nsew', padx=10, pady=10)
 
     # Block content frame
-    block_content_frame = tk.LabelFrame(main_frame, text="Block Content", width=400, height=300)
-    block_content_frame.grid(row=1, column=4, columnspan=2, sticky='nsew', padx=10, pady=10)
+    block_content_frame = tk.LabelFrame(main_frame, text="Block Content", width=400, height=50)
+    block_content_frame.grid(row=2, column=0, columnspan=4, sticky='ew')  # , padx=10, pady=10
     block_content_frame.grid_propagate(False)
-
 
     # Configure column weight to prevent expansion
     main_frame.columnconfigure(3, weight=0)  # Assuming the block_content_frame is in the fourth column
@@ -97,13 +104,13 @@ def visualise_blocks():
     subframe_dropdown = tk.Frame(block_content_frame)
     subframe_dropdown.pack(side=tk.TOP, fill=tk.X, padx=10)
 
-    # Create another subframe for the visualise button
-    subframe_visualise = tk.Frame(block_content_frame)
-    subframe_visualise.pack(side=tk.TOP, fill=tk.X, padx=10)
+    # Create another subframe for the visualize button
+    subframe_visualize = tk.Frame(block_content_frame)
+    subframe_visualize.pack(side=tk.TOP, fill=tk.X, padx=10)
 
     # QEP frame with scrollbar
     qep_frame = tk.LabelFrame(main_frame, text="QEP")
-    qep_frame.grid(row=2, column=0, columnspan=3, sticky='nsew', padx=10, pady=10)
+    qep_frame.grid(row=3, column=0, columnspan=2, sticky='nsew', padx=10, pady=10)
 
     # Create the scrollbar first
     qep_scrollbar = tk.Scrollbar(qep_frame, orient="vertical")
@@ -121,7 +128,7 @@ def visualise_blocks():
 
     # Node details frame with scrolled text
     node_details_frame = tk.LabelFrame(main_frame, text="Node Details")
-    node_details_frame.grid(row=2, column=3, columnspan=3, sticky='nsew', padx=10, pady=10)
+    node_details_frame.grid(row=3, column=1, columnspan=2, sticky='nsew', padx=10, pady=10)
     node_details_text = scrolledtext.ScrolledText(node_details_frame, wrap='word')
     node_details_text.pack(fill='both', expand=True)
 
@@ -175,6 +182,57 @@ def visualise_blocks():
         block_content_table, column_names = get_block_content(table_name, block_id)
         display_table(block_content_table, column_names)
 
+    def show_table_popout():
+        try:
+            table_name = get_table_name()
+            block_id = capture_block_id()
+            data, column_names = get_block_content(table_name, block_id)
+            root1 = tk.Tk()
+            # root1.resizable(False, False)
+            root1.title("Table")
+            screen_width = 1200
+            screen_height = 800
+
+            root1.geometry(f"{screen_width}x{screen_height}")
+            # Create a Treeview widget
+            tree = ttk.Treeview(root1)
+
+            # Check the number of columns dynamically
+            num_columns = len(data[0]) if data else 0  # Check the first row's length
+
+            # Define columns
+            tree["columns"] = list(range(num_columns))
+            tree["show"] = "headings"
+
+            # Add column headings
+            for i, heading in enumerate([column_names[i] for i in range(num_columns)]):
+                tree.heading(i, text=heading)
+                # Adjust column widths based on content
+                tree.column(i, width=tkf.Font().measure(heading))
+
+            # Insert data rows
+            for row in data:
+                tree.insert("", "end", values=row)
+                for i, value in enumerate(row):
+                    # Measure the text in each cell and adjust column width if necessary
+                    col_width = tkf.Font().measure(value)
+                    if tree.column(i, width=None) < col_width:
+                        tree.column(i, width=col_width)
+
+            # Add a horizontal scrollbar
+            hscrollbar = ttk.Scrollbar(root1, orient='horizontal', command=tree.xview)
+            tree.configure(xscrollcommand=hscrollbar.set)
+            hscrollbar.pack(side='bottom', fill='x')
+
+            # Display Treeview
+            tree.pack(fill='both', expand=True)
+
+            root1.mainloop()
+        except Exception as error:
+            show_message_popout(error)
+
+
+
     def display_table(data, column_names):
         global tree, hscrollbar
         # Create a Frame to contain the Treeview
@@ -220,7 +278,7 @@ def visualise_blocks():
         root.mainloop()
 
     # Visualize button
-    visualize_button = tk.Button(subframe_visualise, text="Visualize", command=visualize_block_content)
+    visualize_button = tk.Button(subframe_visualize, text="Visualize", command=show_table_popout)
     visualize_button.pack(side=tk.BOTTOM, pady=(0, 5))
 
     root.mainloop()
@@ -270,7 +328,6 @@ def display_node_details(node_data, node_details_text):
     node_details_text.config(state='disabled')
 
 
-
 def draw_nodes_recursively(canvas, plan, x, y, node_details_text, level=0, parent=None):
     # Check for the existence of 'Relation Name' and include it in the node text if it's a leaf node
     relation_name = plan.get('Relation Name', '')
@@ -306,17 +363,12 @@ def draw_nodes_recursively(canvas, plan, x, y, node_details_text, level=0, paren
 
 # Function to display message
 def show_message_popout(message):
-    def dismiss():
-        root.quit()  # To exit the main loop
 
     root = tk.Tk()
     root.title("Message")
 
     label = tk.Label(root, text=message)
     label.pack()
-
-    submit_button = tk.Button(root, text="Dismiss", command=dismiss)
-    submit_button.pack()
 
     center_window(root, 400, 200)
     root.mainloop()
