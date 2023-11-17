@@ -28,10 +28,7 @@ def visualize():
         try:
             user_input = sql_query_entry.get("1.0", tk.END).strip()
             qep_details = get_qep_details(user_input)
-            block_accessed_details, block_accessed_columns = get_block_accessed_content(user_input)
-            ctid_data = pd.DataFrame(block_accessed_details, columns=block_accessed_columns)
-            ctid_table = Table(ctid_table_frame, dataframe=ctid_data)
-            ctid_table.show()
+
             qep_canvas.delete("all")
 
             # Enable the widget before clearing it and then disable it again
@@ -45,6 +42,17 @@ def visualize():
             # Set the scroll region after everything is drawn on the canvas
             qep_canvas.update_idletasks()  # This updates the layout so the bbox can be calculated correctly
             qep_canvas.config(scrollregion=qep_canvas.bbox("all"))
+
+            block_accessed_details = ""
+            block_accessed_columns = ""
+            try:
+                block_accessed_details, block_accessed_columns = get_block_accessed_content(user_input)
+            except AssertionError as error:
+                show_message_popout(error)
+
+            ctid_data = pd.DataFrame(block_accessed_details, columns=block_accessed_columns)
+            ctid_table = Table(ctid_table_frame, dataframe=ctid_data)
+            ctid_table.show()
         except Exception as error:
             show_message_popout(error)
 
@@ -370,7 +378,7 @@ def show_message_popout(message):
     label = tk.Label(root, text=message)
     label.pack()
 
-    center_window(root, 400, 200)
+    center_window(root, 600, 200)
     root.mainloop()
 
 

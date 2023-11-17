@@ -15,8 +15,11 @@ def get_block_content(table_name, block_id):
 # Function to get ctid table
 def get_block_accessed_content(user_input):
     query = craft_ctid_query(user_input)
-    results_table, column_names = get_query_results(query)
-    return results_table, column_names
+    if query:
+        results_table, column_names = get_query_results(query)
+        return results_table, column_names
+    else:
+        raise AssertionError('Block disk accessed visualization does not support nested queries.')
 
 
 # Part (b) Visualizing different aspects of the QEP including buffer size, cost, etc
@@ -110,7 +113,11 @@ def detect_injection(sql_query):
 
 def craft_ctid_query(sql_query):
     sql_query = process_user_input(sql_query)
-    block_sub_queries(sql_query)  # Block queries with nested queries
+    try:
+        block_sub_queries(sql_query)  # Block queries with nested queries
+    except AssertionError as error:
+        return False
+
     sql_query = remove_group_having_aggregate(sql_query)
 
     temp = sql_query.split("from", 1)
